@@ -5,7 +5,6 @@ from ... data_structures cimport (
     DoubleList,
     Vector3DList,
     QuaternionList,
-    Interpolation,
     VirtualColorList,
     VirtualEulerList,
     VirtualDoubleList,
@@ -13,8 +12,8 @@ from ... data_structures cimport (
     VirtualQuaternionList,
 )
 
-def mixDoubleLists(VirtualDoubleList numbersA, VirtualDoubleList numbersB,
-                   VirtualDoubleList factors, long amount):
+def mixDoubleLists(VirtualDoubleList numbersA, VirtualDoubleList numbersB, VirtualDoubleList factors,
+                   long amount):
     cdef DoubleList results = DoubleList(length = amount)
     cdef Py_ssize_t i
 
@@ -23,8 +22,8 @@ def mixDoubleLists(VirtualDoubleList numbersA, VirtualDoubleList numbersB,
 
     return results
 
-def mixVectorLists(VirtualVector3DList vectorsA, VirtualVector3DList vectorsB,
-                   VirtualDoubleList factors, long amount):
+def mixVectorLists(VirtualVector3DList vectorsA, VirtualVector3DList vectorsB, VirtualDoubleList factors,
+                   long amount):
     cdef Vector3DList results = Vector3DList(length = amount)
     cdef Py_ssize_t i
 
@@ -33,8 +32,8 @@ def mixVectorLists(VirtualVector3DList vectorsA, VirtualVector3DList vectorsB,
 
     return results
 
-def mixQuaternionLists(VirtualQuaternionList quaternionsA, VirtualQuaternionList quaternionsB,
-                       VirtualDoubleList factors, long amount):
+def mixQuaternionLists(VirtualQuaternionList quaternionsA, VirtualQuaternionList quaternionsB, VirtualDoubleList factors,
+                       long amount):
     cdef QuaternionList results = QuaternionList(length = amount)
     cdef Py_ssize_t i
 
@@ -60,29 +59,5 @@ def mixEulerLists(VirtualEulerList eulersA, VirtualEulerList eulersB, VirtualDou
 
     for i in range(amount):
         mixEul3(results.data + i, eulersA.get(i), eulersB.get(i), <float>factors.get(i))
-
-    return results
-
-def calculateInfluenceList(VirtualDoubleList times, VirtualDoubleList startTimes,
-                           Interpolation interpolation, VirtualDoubleList durations,
-                           long amount):
-    cdef DoubleList results = DoubleList(length = amount)
-    cdef Py_ssize_t i
-
-    for i in range(amount):
-        finalDuration = max(durations.get(i), 0.0001)
-        influence = max(min((times.get(i) - startTimes.get(i)) / finalDuration, 1.0), 0.0)
-        results.data[i] = interpolation.evaluate(influence)
-
-    return results
-
-def executeTimeList(VirtualDoubleList times, VirtualDoubleList startTimes,
-                    VirtualDoubleList durations, long amount):
-    cdef DoubleList results = DoubleList(length = amount)
-    cdef Py_ssize_t i
-
-    for i in range(amount):
-        finalDuration = max(durations.get(i), 0.0001)
-        results.data[i] = times.get(i) - startTimes.get(i) - finalDuration
 
     return results

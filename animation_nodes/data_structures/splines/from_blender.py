@@ -1,13 +1,14 @@
 from . poly_spline import PolySpline
-from .. import FloatList, Vector3DList
 from . bezier_spline import BezierSpline
+from .. import FloatList, Vector3DList
 
-def createSplinesFromBlenderObject(bObject, applyModifiers = False):
-    curve = bObject.an.getCurve(applyModifiers)
-    if curve is None: return []
+def createSplinesFromBlenderObject(object):
+    if object is None: return []
+    if object.type != "CURVE": return []
 
     splines = []
-    for bSpline in curve.splines:
+
+    for bSpline in object.data.splines:
         spline = createSplineFromBlenderSpline(bSpline)
         if spline is not None:
             splines.append(spline)

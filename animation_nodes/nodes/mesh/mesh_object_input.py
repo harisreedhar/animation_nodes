@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import *
+from ... data_structures import Mesh, BooleanList
 from ... base_types import AnimationNode, VectorizedSocket
-from ... data_structures import Mesh, Attribute, AttributeType, AttributeDomain, AttributeDataType
 
 class MeshObjectInputNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_MeshObjectInputNode"
@@ -15,7 +15,6 @@ class MeshObjectInputNode(bpy.types.Node, AnimationNode):
         self.newInput("Boolean", "Use Modifiers", "useModifiers", value = False)
         self.newInput("Boolean", "Load UVs", "loadUVs", value = False, hide = True)
         self.newInput("Boolean", "Load Vertex Colors", "loadVertexColors", value = False, hide = True)
-        self.newInput("Boolean", "Load Custom Attributes", "loadCustomAttributes", value = False, hide = True)
         self.newInput("Scene", "Scene", "scene", hide = True)
 
         self.newOutput("Mesh", "Mesh", "mesh")
@@ -31,6 +30,10 @@ class MeshObjectInputNode(bpy.types.Node, AnimationNode):
 
         self.newOutput("Float List", "Local Polygon Areas", "localPolygonAreas")
         self.newOutput("Integer List", "Material Indices", "materialIndices")
+
+        self.newOutput("Boolean List", "Vertices Selection Mask", "verticesSelectionMask")
+        self.newOutput("Boolean List", "Edges Selection Mask", "edgesSelectionMask")
+        self.newOutput("Boolean List", "Polygons Selection Mask", "polygonsSelectionMask")
 
         self.newOutput("Text", "Mesh Name", "meshName")
 
@@ -60,6 +63,9 @@ class MeshObjectInputNode(bpy.types.Node, AnimationNode):
         yield "    polygonCenters = Vector3DList()"
         yield "    localPolygonAreas = DoubleList()"
         yield "    materialIndices = LongList()"
+        yield "    verticesSelectionMask = BooleanList()"
+        yield "    edgesSelectionMask = BooleanList()"
+        yield "    polygonsSelectionMask = BooleanList()"
 
     def iterGetMeshDataCodeLines(self, required):
         if "meshName" in required:
@@ -84,16 +90,20 @@ class MeshObjectInputNode(bpy.types.Node, AnimationNode):
             yield "localPolygonAreas = DoubleList.fromValues(sourceMesh.an.getPolygonAreas())"
         if "materialIndices" in required or meshRequired:
             yield "materialIndices = LongList.fromValues(sourceMesh.an.getPolygonMaterialIndices())"
+        if "verticesSelectionMask" in required:
+            yield "verticesSelectionMask = self.getVerticesSelectionMask(evaluatedObject)"
+        if "edgesSelectionMask" in required:
+            yield "edgesSelectionMask = self.getEdgesSelectionMask(evaluatedObject)"
+        if "polygonsSelectionMask" in required:
+            yield "polygonsSelectionMask = self.getPolygonsSelectionMask(evaluatedObject)"
 
         if meshRequired:
             yield "mesh = Mesh(vertexLocations, edgeIndices, polygonIndices, materialIndices)"
             yield "mesh.setVertexNormals(vertexNormals)"
             yield "mesh.setPolygonNormals(polygonNormals)"
             yield "mesh.setLoopEdges(sourceMesh.an.getLoopEdges())"
-            yield "self.loadMaterialIndices('MATERIAL_INDEX', mesh, sourceMesh, evaluatedObject)"
-            yield "if loadUVs: self.loadUVMaps('UV_MAP', mesh, sourceMesh, object)"
-            yield "if loadVertexColors: self.loadVertexColors('VERTEX_COLOR', mesh, sourceMesh, object)"
-            yield "if loadCustomAttributes: self.loadCustomAttributes('CUSTOM', mesh, sourceMesh, evaluatedObject)"
+            yield "if loadUVs: self.loadUVs(mesh, sourceMesh, object)"
+            yield "if loadVertexColors: self.loadVertexColors(mesh, sourceMesh, object)"
 
     def getVertexLocations(self, mesh, object, useWorldSpace):
         vertices = mesh.an.getVertices()
@@ -119,47 +129,34 @@ class MeshObjectInputNode(bpy.types.Node, AnimationNode):
             centers.transform(object.matrix_world)
         return centers
 
-    def loadMaterialIndices(self, type, mesh, sourceMesh, object):
-        if object.mode != "EDIT":
-            mesh.insertBuiltInAttribute(Attribute("Material Indices",
-                                                  AttributeType.MATERIAL_INDEX,
-                                                  AttributeDomain.FACE,
-                                                  AttributeDataType.INT,
-                                                  sourceMesh.an.getPolygonMaterialIndices()))
-        else:
-            self.setErrorMessage("Object is in edit mode.")
+    def getVerticesSelectionMask(self, object):
+        vertices = object.data.vertices
+        mask = [False] * len(vertices)
+        vertices.foreach_get("select", mask)
+        return BooleanList.fromValues(mask)
 
-    def loadUVMaps(self, type, mesh, sourceMesh, object):
-        if object.mode != "EDIT":
+    def getEdgesSelectionMask(self, object):
+        edges = object.data.edges
+        mask = [False] * len(edges)
+        edges.foreach_get("select", mask)
+        return BooleanList.fromValues(mask)
+
+    def getPolygonsSelectionMask(self, object):
+        polygons = object.data.polygons
+        mask = [False] * len(polygons)
+        polygons.foreach_get("select", mask)
+        return BooleanList.fromValues(mask)
+
+    def loadUVs(self, mesh, sourceMesh, object):
+        if object.mode == "OBJECT":
             for uvMapName in sourceMesh.uv_layers.keys():
-                mesh.insertUVMapAttribute(Attribute(uvMapName,
-                                                    AttributeType.UV_MAP,
-                                                    AttributeDomain.CORNER,
-                                                    AttributeDataType.FLOAT2,
-                                                    sourceMesh.an.getUVMap(uvMapName)))
+                mesh.insertUVMap(uvMapName, sourceMesh.an.getUVMap(uvMapName))
         else:
-            self.setErrorMessage("Object is in edit mode.")
+            self.setErrorMessage("Object has to be in object mode to load UV maps.")
 
-    def loadVertexColors(self, type, mesh, sourceMesh, object):
+    def loadVertexColors(self, mesh, sourceMesh, object):
         if object.mode != "EDIT":
             for colorLayerName in sourceMesh.vertex_colors.keys():
-                mesh.insertVertexColorAttribute(Attribute(colorLayerName,
-                                                          AttributeType.VERTEX_COLOR,
-                                                          AttributeDomain.CORNER,
-                                                          AttributeDataType.BYTE_COLOR,
-                                                          sourceMesh.an.getVertexColorLayer(colorLayerName)))
-        else:
-            self.setErrorMessage("Object is in edit mode.")
-
-    def loadCustomAttributes(self, type, mesh, sourceMesh, object):
-        if object.mode != "EDIT":
-            attributes = object.data.attributes
-            for customAttributeName in attributes.keys():
-                attribute = attributes.get(customAttributeName)
-                mesh.insertCustomAttribute(Attribute(customAttributeName,
-                                                     AttributeType.CUSTOM,
-                                                     AttributeDomain[attribute.domain],
-                                                     AttributeDataType[attribute.data_type],
-                                                     object.data.an.getCustomAttribute(customAttributeName)))
+                mesh.insertVertexColorLayer(colorLayerName, sourceMesh.an.getVertexColorLayer(colorLayerName))
         else:
             self.setErrorMessage("Object is in edit mode.")

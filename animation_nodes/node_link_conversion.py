@@ -155,6 +155,7 @@ class ConvertObjectToShapeKey(LinkCorrection):
         return origin.dataType == "Object" and target.dataType == "Shape Key"
     def insert(self, nodeTree, origin, target, dataOrigin):
         getShapeKeys, getListElement = insertNodes(nodeTree, ["an_ShapeKeysFromObjectNode", "an_GetListElementNode"], origin, target)
+        getListElement.inputs[1].value = 1
         getListElement.assignType("Shape Key")
 
         origin.linkWith(getShapeKeys.inputs[0])
@@ -202,6 +203,68 @@ class ConvertFromGeneric(LinkCorrection):
         tree_info.update()
         node.assignOutputType(target.dataType)
 
+class ConvertFloatListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Float List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "FLOATS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)
+
+class ConvertVectorListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Vector List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "VECTORS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)
+
+class ConvertColorListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Color List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "COLORS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)
+
+class ConvertQuaternionListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Quaternion List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "QUATERNIONS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)
+
+class ConvertMatrixListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Matrix List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "MATRICES"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)
+
+class ConvertBooleanListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Boolean List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "BOOLEANS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)        
+
+class ConvertIntegerListToArray(LinkCorrection):
+    def check(self, origin, target):
+        return origin.dataType == "Integer List" and target.dataType == "NDArray"
+    def insert(self, nodeTree, origin, target, dataOrigin):
+        node = insertLinkedNode(nodeTree, "an_ConvertToArray", origin, target)
+        node.mode = "INTEGERS"
+        node.inputs[0].linkWith(origin)
+        node.outputs[0].linkWith(target)                                  
 
 def insertLinkedNode(nodeTree, nodeType, origin, target):
     node = insertNode(nodeTree, nodeType, origin, target)
@@ -246,4 +309,11 @@ linkCorrectors = [
     ConvertToText(),
     ConvertFromGenericList(),
     ConvertFromGeneric(),
+    ConvertFloatListToArray(),
+    ConvertVectorListToArray(),
+    ConvertColorListToArray(),
+    ConvertQuaternionListToArray(),
+    ConvertMatrixListToArray(),
+    ConvertBooleanListToArray(),
+    ConvertIntegerListToArray(),
 ]

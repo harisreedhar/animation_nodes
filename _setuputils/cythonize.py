@@ -1,29 +1,25 @@
 from . generic import *
 
-def execute_Cythonize(setupInfoList, addonDirectory, configs):
+def execute_Cythonize(setupInfoList, addonDirectory):
     printHeader("Run Cythonize")
-    tasks = getCythonizeTasks(addonDirectory, configs)
+    tasks = getCythonizeTasks(addonDirectory)
     for i, task in enumerate(tasks, 1):
         print("{}/{}:".format(i, len(tasks)))
         task.execute()
 
-def getCythonizeTasks(addonDirectory, configs):
-    includePaths = configs.get("Cython Include Paths", [])
-    includePaths.append(".")
-
+def getCythonizeTasks(addonDirectory):
     tasks = []
     for path in iterCythonFilePaths(addonDirectory):
-        tasks.append(CythonizeTask(path, includePaths))
+        tasks.append(CythonizeTask(path))
     return tasks
 
 def iterCythonFilePaths(addonDirectory):
     yield from iterPathsWithExtension(addonDirectory, ".pyx")
 
 class CythonizeTask:
-    def __init__(self, path, includePaths):
+    def __init__(self, path):
         self.path = path
-        self.includePaths = includePaths
 
     def execute(self):
         from Cython.Build import cythonize
-        cythonize(self.path, include_path = self.includePaths, compiler_directives = {"language_level" : "3"})
+        cythonize(self.path, compiler_directives = {"language_level" : "3"})

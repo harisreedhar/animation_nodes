@@ -1,9 +1,7 @@
 import bpy
-import math
 from bpy.props import *
 from ... events import executionCodeChanged
-from ... data_structures import Matrix4x4List
-from ... base_types import AnimationNode, VectorizedSocket
+from ... base_types import AnimationNode
 
 conversionTypeItems = [
     ("QUATERNION_TO_EULER", "Quaternion to Euler", "", "NONE", 0),
@@ -28,56 +26,37 @@ class ConvertRotationsNode(bpy.types.Node, AnimationNode):
         items = conversionTypeItems, update = AnimationNode.refresh)
 
     useDegree: BoolProperty(name = "Use Degree", default = False, update = executionCodeChanged)
-    useList: VectorizedSocket.newProperty()
 
     def create(self):
         if self.conversionType == "QUATERNION_TO_EULER":
-            self.newInput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
-            self.newOutput(VectorizedSocket("Euler", "useList",
-                ("Euler", "euler"),("Eulers", "eulers")))
+            self.newInput("Quaternion", "Quaternion", "quaternion")
+            self.newOutput("Euler", "Euler", "euler")
         if self.conversionType == "EULER_TO_QUATERNION":
-            self.newInput(VectorizedSocket("Euler", "useList",
-                ("Euler", "euler"),("Eulers", "eulers")))
-            self.newOutput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
+            self.newInput("Euler", "Euler", "euler")
+            self.newOutput("Quaternion", "Quaternion", "quaternion")
 
         if self.conversionType == "QUATERNION_TO_MATRIX":
-            self.newInput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
-            self.newOutput(VectorizedSocket("Matrix", "useList",
-                ("Matrix", "matrix"),("Matrices", "matrices")))
+            self.newInput("Quaternion", "Quaternion", "quaternion")
+            self.newOutput("Matrix", "Matrix", "matrix")
         if self.conversionType == "MATRIX_TO_QUATERNION":
-            self.newInput(VectorizedSocket("Matrix", "useList",
-                ("Matrix", "matrix"),("Matrices", "matrices")))
-            self.newOutput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
+            self.newInput("Matrix", "Matrix", "matrix")
+            self.newOutput("Quaternion", "Quaternion", "quaternion")
 
         if self.conversionType == "EULER_TO_MATRIX":
-            self.newInput(VectorizedSocket("Euler", "useList",
-                ("Euler", "euler"),("Eulers", "eulers")))
-            self.newOutput(VectorizedSocket("Matrix", "useList",
-                ("Matrix", "matrix"),("Matrices", "matrices")))
+            self.newInput("Euler", "Euler", "euler")
+            self.newOutput("Matrix", "Matrix", "matrix")
         if self.conversionType == "MATRIX_TO_EULER":
-            self.newInput(VectorizedSocket("Matrix", "useList",
-                ("Matrix", "matrix"),("Matrices", "matrices")))
-            self.newOutput(VectorizedSocket("Euler", "useList",
-                ("Euler", "euler"),("Eulers", "eulers")))
+            self.newInput("Matrix", "Matrix", "matrix")
+            self.newOutput("Euler", "Euler", "euler")
 
         if self.conversionType == "QUATERNION_TO_AXIS_ANGLE":
-            self.newInput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
-            self.newOutput(VectorizedSocket("Vector", "useList",
-                ("Axis", "axis"),("Axises", "axises")))
-            self.newOutput(VectorizedSocket("Float", "useList",
-                ("Angle", "angle"),("Angles", "angles")))
+            self.newInput("Quaternion", "Quaternion", "quaternion")
+            self.newOutput("Vector", "Axis", "axis")
+            self.newOutput("Float", "Angle", "angle")
         if self.conversionType == "AXIS_ANGLE_TO_QUATERNION":
-            self.newInput(VectorizedSocket("Vector", "useList",
-                ("Axis", "axis"),("Axises", "axises")))
-            self.newInput(VectorizedSocket("Float", "useList",
-                ("Angle", "angle"),("Angles", "angles")))
-            self.newOutput(VectorizedSocket("Quaternion", "useList",
-                ("Quaternion", "quaternion"), ("Quaternions", "quaternions")))
+            self.newInput("Vector", "Axis", "axis")
+            self.newInput("Float", "Angle", "angle")
+            self.newOutput("Quaternion", "Quaternion", "quaternion")
 
         self.inputs[0].defaultDrawType = "PREFER_PROPERTY"
 
@@ -91,60 +70,26 @@ class ConvertRotationsNode(bpy.types.Node, AnimationNode):
 
     def getExecutionCode(self, required):
         if self.conversionType == "QUATERNION_TO_EULER":
-            if self.useList:
-                return "eulers = AN.nodes.rotation.c_utils.quaternionListToEulerList(quaternions)"
-            else:
-                return "euler = quaternion.to_euler('XYZ')"
+            return "euler = quaternion.to_euler('XYZ')"
         if self.conversionType == "EULER_TO_QUATERNION":
-            if self.useList:
-                return "quaternions = AN.nodes.rotation.c_utils.eulerListToQuaternionList(eulers)"
-            else:
-                return "quaternion = euler.to_quaternion()"
+            return "quaternion = euler.to_quaternion()"
 
         if self.conversionType == "QUATERNION_TO_MATRIX":
-            if self.useList:
-                return "matrices = AN.nodes.rotation.c_utils.quaternionListToMatrixList(quaternions)"
-            else:
-                return "matrix = quaternion.normalized().to_matrix().to_4x4()"
+            return "matrix = quaternion.normalized().to_matrix().to_4x4()"
         if self.conversionType == "MATRIX_TO_QUATERNION":
-            if self.useList:
-                return "quaternions = Matrix4x4List.toQuaternions(matrices)"
-            else:
-                return "quaternion = matrix.to_quaternion()"
+            return "quaternion = matrix.to_quaternion()"
 
         if self.conversionType == "EULER_TO_MATRIX":
-            if self.useList:
-                return "matrices = AN.nodes.matrix.c_utils.createRotationsFromEulers(eulers)"
-            else:
-                return "matrix = euler.to_matrix().to_4x4()"
+            return "matrix = euler.to_matrix().to_4x4()"
         if self.conversionType == "MATRIX_TO_EULER":
-            if self.useList:
-                return "eulers = Matrix4x4List.toEulers(matrices)"
-            else:
-                return "euler = matrix.to_euler('XYZ')"
+            return "euler = matrix.to_euler('XYZ')"
 
         if self.conversionType == "QUATERNION_TO_AXIS_ANGLE":
-            if self.useDegree:
-                if self.useList:
-                    return "axises, angles = AN.nodes.rotation.c_utils.quaternionListToAxisListAngleList(quaternions, True)"
-                else:
-                    return "axis, angle = quaternion.axis, math.degrees(quaternion.angle)"
-            else:
-                if self.useList:
-                    return "axises, angles = AN.nodes.rotation.c_utils.quaternionListToAxisListAngleList(quaternions, False)"
-                else:
-                    return "axis, angle = quaternion.to_axis_angle()"
+            if self.useDegree: return "axis, angle = quaternion.axis, math.degrees(quaternion.angle)"
+            else: return "axis, angle = quaternion.to_axis_angle()"
         if self.conversionType == "AXIS_ANGLE_TO_QUATERNION":
-            if self.useDegree:
-                if self.useList:
-                    return "quaternions = AN.nodes.rotation.c_utils.axisListAngleListToQuaternionList(axises, angles, True)"
-                else:
-                    return "quaternion = Quaternion(axis, math.radians(angle))"
-            else:
-                if self.useList:
-                    return "quaternions = AN.nodes.rotation.c_utils.axisListAngleListToQuaternionList(axises, angles, False)"
-                else:
-                    return "quaternion = Quaternion(axis, angle)"
+            if self.useDegree: return "quaternion = Quaternion(axis, math.radians(angle))"
+            else: return "quaternion = Quaternion(axis, angle)"
 
     def getUsedModules(self):
         return ["math"]

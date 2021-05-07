@@ -1,4 +1,5 @@
 def importDataStructures():
+    import numpy as NDArray
     from . color import Color
     from . struct import ANStruct
 
@@ -25,19 +26,12 @@ def importDataStructures():
     from . splines.poly_spline import PolySpline
     from . splines.bezier_spline import BezierSpline
     from . default_lists.c_default_list import CDefaultList
-    from . attributes.attribute import Attribute
-    from . attributes.attribute import AttributeType
-    from . attributes.attribute import AttributeDomain
-    from . attributes.attribute import AttributeDataType
     from . interpolation import Interpolation
     from . falloffs.falloff_base import Falloff, BaseFalloff, CompoundFalloff
 
     from . sounds.sound import Sound
     from . sounds.sound_data import SoundData
     from . sounds.sound_sequence import SoundSequence
-
-    from . midi.midi_note import MIDINote
-    from . midi.midi_track import MIDITrack
 
     from . action import (
         Action, ActionEvaluator, ActionChannel,

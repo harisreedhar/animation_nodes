@@ -2,14 +2,7 @@ import bpy
 from bpy.props import *
 from ... events import propertyChanged
 from ... base_types import AnimationNode
-from ... data_structures import (
-    Mesh,
-    LongList,
-    Attribute,
-    AttributeType,
-    AttributeDomain,
-    AttributeDataType,
-)
+from ... data_structures import Mesh, LongList
 
 class CombineMeshNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_CombineMeshNode"
@@ -39,16 +32,11 @@ class CombineMeshNode(bpy.types.Node, AnimationNode):
         layout.prop(self, "skipValidation")
 
     def execute(self, vertexLocations, edgeIndices, polygonIndices, materialIndices):
+        if not self.inputs["Material Indices"].isUsed:
+            materialIndices = LongList(length = len(polygonIndices))
+            materialIndices.fill(0)
         try:
-            mesh = Mesh(vertexLocations, edgeIndices, polygonIndices, skipValidation = self.skipValidation)
-            if self.inputs["Material Indices"].isUsed:
-                if len(materialIndices) == len(polygonIndices) and materialIndices.getMinValue() >= 0:
-                    mesh.insertBuiltInAttribute(Attribute("Material Indices", AttributeType.MATERIAL_INDEX,
-                                                          AttributeDomain.FACE, AttributeDataType.INT,
-                                                          materialIndices))
-                else:
-                    self.raiseErrorMessage("Invalid material indices.")
-            return mesh
-
+            return Mesh(vertexLocations, edgeIndices, polygonIndices,
+                    materialIndices, skipValidation = self.skipValidation)
         except Exception as e:
             self.raiseErrorMessage(str(e))

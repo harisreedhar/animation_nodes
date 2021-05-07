@@ -1,5 +1,7 @@
 import bpy
+from . handlers import eventHandler
 
+enableSelectionSorting = True
 sortedSelectionNames = []
 
 def getSortedSelectedObjects():
@@ -11,29 +13,28 @@ def getSortedSelectedObjects():
 def getSortedSelectedObjectNames():
     return sortedSelectionNames
 
-def updateSelectionSorting(viewLayer):
+@eventHandler("ALWAYS")
+def updateSelectionSorting():
     global sortedSelectionNames
 
-    selectedNames = getSelectedObjectNames(viewLayer)
+    selectedNames = getSelectedObjectNames()
 
-    newSortedSelection = []
+    if enableSelectionSorting:
+        newSortedSelection = []
 
-    selectedNamesSet = set(selectedNames)
-    for name in sortedSelectionNames:
-        if name in selectedNamesSet:
-            newSortedSelection.append(name)
+        selectedNamesSet = set(selectedNames)
+        for name in sortedSelectionNames:
+            if name in selectedNamesSet:
+                newSortedSelection.append(name)
 
-    for name in selectedNames:
-        if name not in newSortedSelection:
-            newSortedSelection.append(name)
+        for name in selectedNames:
+            if name not in newSortedSelection:
+                newSortedSelection.append(name)
 
-    sortedSelectionNames = newSortedSelection
+        sortedSelectionNames = newSortedSelection
+    else:
+        sortedSelectionNames = selectedNames
 
-def getSelectedObjectNames(viewLayer):
+def getSelectedObjectNames():
+    viewLayer = bpy.data.window_managers[0].windows[0].view_layer
     return [obj.name for obj in viewLayer.objects if obj.select_get(view_layer = viewLayer)]
-
-def getSelectedObjects(viewLayer):
-    return [obj for obj in viewLayer.objects if obj.select_get(view_layer = viewLayer)]
-
-def getActiveObject(viewLayer):
-    return viewLayer.objects.active

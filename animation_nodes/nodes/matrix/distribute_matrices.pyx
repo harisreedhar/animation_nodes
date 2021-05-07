@@ -41,14 +41,12 @@ searchItems = {
     "Distribute Linear" : "LINEAR",
     "Distribute Grid" : "GRID",
     "Distribute Circle" : "CIRCLE",
-    "Distribute Mesh" : "MESH",
+    "Distribute MESH" : "MESH",
     "Distribute Spiral" : "SPIRAL",
     "Distribute Spline" : "SPLINE",
 }
 
 directionAxisItems = [(axis, axis, "") for axis in ("X", "Y", "Z")]
-
-planeAxisItems = [(axis, axis, "") for axis in ("XY", "YZ", "ZX")]
 
 class DistributeMatricesNode(bpy.types.Node, AnimationNode):
     bl_idname = "an_DistributeMatricesNode"
@@ -60,13 +58,14 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
     __annotations__["mode"] = EnumProperty(name = "Mode", default = "GRID",
         items = modeItems, update = AnimationNode.refresh)
 
-    __annotations__["directionAxis"] = EnumProperty(items = directionAxisItems, update = propertyChanged, default = "X")
-    __annotations__["centerLinear"] =  BoolProperty(name = "Center Linear",
-        description = "Center the linear along the axis",
-        default = False, update = propertyChanged)
-
     __annotations__["distanceMode"] = EnumProperty(name = "Distance Mode", default = "SIZE",
         items = distanceModeItems, update = AnimationNode.refresh)
+
+    __annotations__["meshMode"] = EnumProperty(name = "Mesh Mode", default = "VERTICES",
+        items = meshModeItems, update = AnimationNode.refresh)
+
+    __annotations__["splineDistributionMethod"] = EnumProperty(name = "Distribution Method",
+        default = "UNIFORM", items = splineDistributionMethodItems, update = AnimationNode.refresh)
 
     __annotations__["centerAlongX"] = BoolProperty(name = "Center Along X", default = True,
         description = "Center the grid along the x axis", update = propertyChanged)
@@ -75,24 +74,22 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
     __annotations__["centerAlongZ"] = BoolProperty(name = "Center Along Z", default = False,
         description = "Center the grid along the z axis", update = propertyChanged)
 
-    __annotations__["planeAxis"] = EnumProperty(items = planeAxisItems, update = propertyChanged, default = "XY")
-
-    __annotations__["meshMode"] = EnumProperty(name = "Mesh Mode", default = "VERTICES",
-        items = meshModeItems, update = AnimationNode.refresh)
-
-    __annotations__["centerSpiral"] =  BoolProperty(name = "Center Spiral",
-        description = "Center the spiral along Z axis",
-        default = False, update = propertyChanged)
-
-    __annotations__["splineDistributionMethod"] = EnumProperty(name = "Distribution Method",
-        default = "UNIFORM", items = splineDistributionMethodItems, update = AnimationNode.refresh)
-
     __annotations__["exactCircleSegment"] = BoolProperty(name = "Exact Circle Segment", default = False,
         update = propertyChanged)
 
     __annotations__["splineResolution"] = IntProperty(name = "Spline Resolution", min = 2, default = 20,
         description = "Increase to have a more accurate evaluation if the type is set to Uniform",
         update = propertyChanged)
+    
+    __annotations__["centerSpiral"] =  BoolProperty(name = "Center Spiral",
+        description = "Center the spiral along Z axis",
+        default = False, update = propertyChanged)
+    
+    __annotations__["centerLinear"] =  BoolProperty(name = "Center Linear",
+        description = "Center the linear along the axis",
+        default = False, update = propertyChanged)
+
+    __annotations__["directionAxis"] = EnumProperty(items = directionAxisItems, update = propertyChanged, default = "X")
 
     def create(self):
         if self.mode == "LINEAR":
@@ -151,19 +148,17 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
         if self.mode == "LINEAR":
             layout.prop(self, "directionAxis", expand = True)
             layout.prop(self, "centerLinear", toggle = True)
+        if self.mode == "MESH":
+            col.prop(self, "meshMode", text = "")
         if self.mode == "GRID":
             row = col.row(align = True)
             row.prop(self, "centerAlongX", text = "X", toggle = True)
             row.prop(self, "centerAlongY", text = "Y", toggle = True)
             row.prop(self, "centerAlongZ", text = "Z", toggle = True)
-        if self.mode == "CIRCLE":
-            layout.prop(self, "planeAxis", expand = True)
-        if self.mode == "MESH":
-            col.prop(self, "meshMode", text = "")
-        if self.mode == "SPIRAL":
-            layout.prop(self, "centerSpiral", toggle = True)
         if self.mode == "SPLINE":
             col.prop(self, "splineDistributionMethod", text = "")
+        if self.mode == "SPIRAL":
+            layout.prop(self, "centerSpiral", toggle = True)
 
     def drawAdvanced(self, layout):
         if self.mode == "CIRCLE":
@@ -264,39 +259,12 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
         stepCos = cos(angleStep)
         stepSin = sin(angleStep)
 
-        if self.planeAxis == "XY":
-            for i in range(amount):
-                vector.x = iCos * radius
-                vector.y = iSin * radius
-                vector.z = 0
-
-                setTranslationMatrix(matrices.data + i, &vector)
-                setMatrixCustomZRotation(matrices.data + i, iCos, iSin)
-
-                rotateStep(&iCos, &iSin, stepCos, stepSin)
-
-            return matrices
-
-        if self.planeAxis == "YZ":
-            for i in range(amount):
-                vector.x = 0
-                vector.y = iCos * radius
-                vector.z = iSin * radius
-
-                setTranslationMatrix(matrices.data + i, &vector)
-                setMatrixCustomXRotation(matrices.data + i, iCos, iSin)
-
-                rotateStep(&iCos, &iSin, stepCos, stepSin)
-
-            return matrices
-
         for i in range(amount):
             vector.x = iCos * radius
-            vector.y = 0
-            vector.z = iSin * radius
-
+            vector.y = iSin * radius
+            vector.z = 0
             setTranslationMatrix(matrices.data + i, &vector)
-            setMatrixCustomYRotation(matrices.data + i, iCos, iSin)
+            setMatrixCustomZRotation(matrices.data + i, iCos, iSin)
 
             rotateStep(&iCos, &iSin, stepCos, stepSin)
 
@@ -338,9 +306,9 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
         iSin = sin(startAngle)
         stepCos = cos(angleStep)
         stepSin = sin(angleStep)
-
+        
         zOffset = (spiralHeight / 2) * self.centerSpiral
-
+        
         for i in range(amount):
             f = <float>i * factor
 
@@ -387,14 +355,6 @@ class DistributeMatricesNode(bpy.types.Node, AnimationNode):
 
 cdef int limitAmount(n):
     return max(min(n, INT_MAX), 0)
-
-cdef inline void setMatrixCustomXRotation(Matrix4* m, double iCos, double iSin):
-    m.a22 = m.a33 = iCos
-    m.a23, m.a32 = -iSin, iSin
-
-cdef inline void setMatrixCustomYRotation(Matrix4* m, double iCos, double iSin):
-    m.a11 = m.a33 = iCos
-    m.a13, m.a31 = -iSin, iSin
 
 cdef inline void setMatrixCustomZRotation(Matrix4* m, double iCos, double iSin):
     m.a11 = m.a22 = iCos
