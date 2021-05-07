@@ -3,10 +3,10 @@ name: Build And Deploy
 on:
   push:
     branches:
-      - AN-bluefox
+      - AN_BlueFox-Old
   pull_request:
     branches:
-      - AN-bluefox
+      - AN_BlueFox-Old
 
 jobs:
   build:
